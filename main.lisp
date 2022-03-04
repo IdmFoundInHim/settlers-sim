@@ -14,3 +14,16 @@
 	    moves))
     (nreverse moves)))
 
+(defun die () "Result of rolling a six-sided die" (+ 1 (random 5)))
+
+(defun dice () "Result of rolling two dice" (+ (die) (die)))
+ 
+(defclass rules ()
+  ((geography 
+    :initform (random-geography))
+   (game
+    :initform (make-adjustable-vector :element-type 'list))
+
+(defclass cooperative ()
+  ((inventory :initform (make-adjustable-vector :element-type 'symbol))))
+				
