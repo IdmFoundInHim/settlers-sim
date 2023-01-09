@@ -1,3 +1,5 @@
+(proclaim '(optimize speed))
+
 (needs
  (fun macro-possible) random-order
  (fun macro-danger) layout-hexes ; Randomly generated parameter, likewise for next two
@@ -22,6 +24,48 @@
 
 ;;; Game Procedures
 
+(defgeneric random-order (array)
+  (:documentation "Randomize an array regardless of the contents"))
+
+(tests
+ (random-order ()) -> ()
+ (random-order (vector)) -> #()
+ (random-order (list nil)) -> (NIL)
+ (random-order (vector 0)) -> #(0)
+ (random-order (list 2 3 3 4 4 5 5 6 6 8 8 9 9 10 10 11 11 12)) -> (...) ; chances
+ (random-order #(#(#(0 0 0) #(1 0 0) #(1 1 0) #(1 1 1) #(0 1 1) #(0 0 1))
+		 #(#(-1 0 1) #(0 0 1) #(0 1 1) #(0 1 2) #(-1 1 2) #(-1 0 2))
+		 #(#(0 1 1) #(1 1 1) #(1 2 1) #(1 2 2) #(0 2 2) #(0 1 2))
+		 #(#(1 1 0) #(2 1 0) #(2 2 0) #(2 2 1) #(1 2 1) #(1 1 1))
+		 #(#(-2 0 2) #(-1 0 2) #(-1 1 2) #(-1 1 3) #(-2 1 3) #(-2 0 3))
+		 #(#(-1 1 2) #(0 1 2) #(0 2 2) #(0 2 3) #(-1 2 3) #(-1 1 3))
+		 #(#(0 2 2) #(1 2 2) #(1 3 2) #(1 3 3) #(0 3 3) #(0 2 3))
+		 #(#(1 2 1) #(2 2 1) #(2 3 1) #(2 3 2) #(1 3 2) #(1 2 2))
+		 #(#(2 2 0) #(3 2 0) #(3 3 0) #(3 3 1) #(2 3 1) #(2 2 1))
+		 #(#(-2 1 3) #(-1 1 3) #(-1 2 3) #(-1 2 4) #(-2 2 4) #(-2 1 4))
+		 #(#(-1 2 3) #(0 2 3) #(0 3 3) #(0 3 4) #(-1 3 4) #(-1 2 4))
+		 #(#(0 3 3) #(1 3 3) #(1 4 3) #(1 4 4) #(0 4 4) #(0 3 4))
+		 #(#(1 3 2) #(2 3 2) #(2 4 2) #(2 4 3) #(1 4 3) #(1 3 3))
+		 #(#(2 3 1) #(3 3 1) #(3 4 1) #(3 4 2) #(2 4 2) #(2 3 2))
+		 #(#(-2 2 4) #(-1 2 4) #(-1 3 4) #(-1 3 5) #(-2 3 5) #(-2 2 5))
+		 #(#(-1 3 4) #(0 3 4) #(0 4 4) #(0 4 5) #(-1 4 5) #(-1 3 5))
+		 #(#(0 4 4) #(1 4 4) #(1 5 4) #(1 5 5) #(0 5 5) #(0 4 5))
+		 #(#(1 4 3) #(2 4 3) #(2 5 3) #(2 5 4) #(1 5 4) #(1 4 4))
+		 #(#(2 4 2) #(3 4 2) #(3 5 2) #(3 5 3) #(2 5 3) #(2 4 3)))) ; hexes by points
+ )
+
+(defmethod random-order ((array list))
+  (labels ((pick-object (out length in)
+	     (let ((item (nth (random length) in)))
+	       (if (= 1 length) (append out (list item)) (funcall #'pick-object (append out (list item)) (1- length) (remove item in :count 1))))))
+    (if array (funcall #'pick-object '() (length array) array))))
+
+(defmethod random-order ((array vector))
+  (labels ((pick-object (out length in)
+	     (let ((item (elt in (random length))))
+	       (if (= 1 length) (concatenate 'vector out (vector item)) (funcall #'pick-object (concatenate 'vector out (vector item)) (1- length) (remove item in :count 1))))))
+    (if (not (equalp #() array)) (funcall #'pick-object (make-array 0) (length array) array))))  
+
 (defmacro order-chances () ; Alternatives methods in rules. If you desire those, modify this.
   '(random-order chance-pieces))
 
@@ -43,8 +87,7 @@
 (defun build-trade-phase (current-player everyone)
   (process-actions until end
 		   only allow trade from everyone ; Trades need to involve current-player
-		   allow '(end play build-road build-settlement
-			   build-city build-devcard) only from current-player))
+		   allow '(end play build-road build-settlement build-city build-devcard) only from current-player))
 
 (defun end-phase (current-player board inventories)
   (if (< 9 (+ (query-victorypoints board current-player)
